@@ -61,7 +61,7 @@ def get_taiwan_bank_exchange() -> float:
     print(f"觀察匯率:{number_obv}")
     return float(number_obv)
 
-while True:
+while (True):
     MAX_usdt_twd = get_max_exchange()
     number_total_format = get_taiwan_bank_exchange()
     if MAX_usdt_twd > number_total_format:
