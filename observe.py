@@ -1,57 +1,76 @@
 #!/usr/bin/python3
 
 import requests
+import const
 from bs4 import BeautifulSoup
 from datetime import datetime
+import time
+import configparser
+import os
 
-def send_msg(msg:str):
+
+def load_conf():
+    if False == os.path.exists('./app.ini'):
+        raise("please check the ./app.ini")
+    config = configparser.ConfigParser()
+    config.read('./app.ini')
+    return config['app']
+
+def send_msg(key: str, chat_id: str, msg: str):
     assert type(msg) == str, "Hello, World!!"
-    url = f'https://api.telegram.org/bot{token}/sendMessage?chat_id={-4584076509}&text={msg}'
+    url = f'https://api.telegram.org/bot{key}/sendMessage?chat_id={chat_id}&text={msg}'
     requests.get(url)
 
+
+conf = load_conf()
 current_time = datetime.now()
 
 formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S")
 print(f"\n請求時間：{formatted_time}")
 
 ### MAX
-url = "https://max-api.maicoin.com/api/v2/tickers"
-response = requests.get(url)
+def get_max_exchange() -> float:
+    response = requests.get(const.MAXExchangeURL)
+    if response.status_code == 200:
+        data = response.json()
+        MAX_usdt_twd = data.get("usdttwd").get("last")
+        print(f"MAX 的USDT/TWD匯率: {MAX_usdt_twd}")
+        return float(MAX_usdt_twd)
+    else :
+        print("壞了，根本就不能用啊，ERROR CODE:",response.status_code)
 
-if response.status_code == 200:
-    data = response.json()
-    MAX_usdt_twd = data.get("usdttwd").get("last")
+def get_taiwan_bank_exchange() -> float:
+    #台灣銀行牌告匯率網頁
+    response = requests.get(const.TaiwanBankURL)
+    html_doc = response.text
 
-    print(f"MAX 的USDT/TWD匯率: {MAX_usdt_twd}")
+    soup = BeautifulSoup(html_doc, "html.parser")
+    element = soup.find("td", {"data-table": "本行即期賣出", "class": "rate-content-sight"})
+    number_sell = element.text.strip()
+    print(f"台灣銀行即期賣出的 USD/TWD 匯率 : {number_sell}")
 
-else :
-    print("壞了，根本就不能用啊，ERROR CODE:",response.status_code)
+    element = soup.find("td", {"data-table": "本行即期買入", "class": "rate-content-sight"})
+    number_buy = element.text.strip()
+    print(f"台灣銀行即期買入的 USD/TWD 匯率 : {number_buy}")
 
+    number_total = ( float(number_sell) + float(number_buy) ) / 2
+    number_total_format = format(number_total, '.3f')
+    print(f"匯率:{number_total_format}")
 
-#台灣銀行牌告匯率網頁
-url = "https://rate.bot.com.tw/xrt?Lang=zh-TW"
-response = requests.get(url)
-html_doc = response.text
+    number_obv = ( format(float(number_total) * 1.02, '.3f') )
+    print(f"觀察匯率:{number_obv}")
+    return float(number_obv)
 
-soup = BeautifulSoup(html_doc, "html.parser")
-element = soup.find("td", {"data-table": "本行現金賣出", "class": "rate-content-cash"})
-number_sell = element.text.strip()
-print(f"台灣銀行現金賣出的 USD/TWD 匯率 : {number_sell}")
+while True:
+    MAX_usdt_twd = get_max_exchange()
+    number_total_format = get_taiwan_bank_exchange()
+    if MAX_usdt_twd > number_total_format:
+        msg = f"超過2%了，趕快套利!!\n匯率:{number_total_format}\nMAX 的USDT/TWD匯率:{MAX_usdt_twd}"
+        send_msg(conf["api_key"], conf["chat_id"], msg)
+        print(f"超過2%了，趕快套利")
+    else:
+        # msg = f"等待下次機會!!\n觀察匯率:{number_total_format}\nMAX 的USDT/TWD匯率:{MAX_usdt_twd}"
+        # send_msg(conf["api_key"], conf["chat_id"], msg)
+        print(f"等待下次機會!!")
+    time.sleep(60 * 5)
 
-element = soup.find("td", {"data-table": "本行現金買入", "class": "rate-content-cash"})
-number_buy = element.text.strip()
-print(f"台灣銀行現金買入的 USD/TWD 匯率 : {number_buy}")
-
-number_total = ( float(number_sell) + float(number_buy) ) / 2
-number_total_format = format(number_total, '.3f')
-print(f"匯率:{number_total_format}")
-
-number_obv = ( format(float(number_total) * 1.02, '.3f') )
-print(f"觀察匯率:{number_obv}")
-
-if float(MAX_usdt_twd) > float(number_obv):
-    send_msg("超過2%了，趕快套利!!\n匯率:{number_total_format}\nMAX 的USDT/TWD匯率:{MAX_usdt_twd}")
-    print(f"超過2%了，趕快套利")
-else:
-    #send_msg(f"等待下次機會!!\n觀察匯率:{number_total_format}\nMAX 的USDT/TWD匯率:{MAX_usdt_twd}")
-    print(f"等待下次機會!!")
