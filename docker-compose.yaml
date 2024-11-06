@@ -1,0 +1,13 @@
+services:
+  observe_app:                       # 定義服務名稱
+    build:
+      context: .                     # 指定構建上下文，為當前目錄
+      dockerfile: Dockerfile         # 指定 Dockerfile 的名稱
+    container_name: observe_app_container  # 指定容器名稱
+    working_dir: /code               # 指定容器內的工作目錄
+    volumes:
+      - .:/code                      # 將當前目錄掛載到容器內的 /code 目錄
+    command: python3 observe.py      # 指定啟動容器時執行的命令
+    environment:
+      - PYTHONUNBUFFERED=1           # 環境變量，設置 PYTHONUNBUFFERED 為 1，以即時輸出日誌
+    restart: always                  # 設置重啟策略，確保容器在異常退出時自動重啟
