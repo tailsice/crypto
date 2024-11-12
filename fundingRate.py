@@ -42,9 +42,9 @@ f = open(path, 'w')
 f.write(funding_rate)
 f.close()
 
-if float(funding_rate) = float(benchmark_rate):
+if float(funding_rate) == float(benchmark_rate):
     exit()
-elif: float(funding_rate) < float(benchmark_rate):
+elif float(funding_rate) < float(benchmark_rate):
     send_msg(f"Funding Rate continue to rise\nLast 30 minutes Funding Rate (Bybit) : {benchmark_rate}\nBTC/USDT Funding Rate (Bybit) : {funding_rate}")
 else:
     send_msg(f"Funding Rate continue to fall\nLast 30 minutes Funding Rate (Bybit) : {benchmark_rate}\nBTC/USDT Funding Rate (Bybit) : {funding_rate}")
